@@ -1,20 +1,22 @@
 {
-    "name": "l1ve709-voice-joinner",
-    "version": "1.0.0",
-    "type": "module",
-    "description": "be able to automatically put your accounts in discord audio using user tokens",
-    "main": "./src/server.js",
-    "scripts": {
-      "start": "node .",
-      "dev": "node .",
-      "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "author": "l1ve709",
-    "license": "MIT",
-    "dependencies": {
-      "@discordjs/voice": "^0.16.0",
-      "discord.js": "^14.15.3",
-      "discord.js-selfbot-v13": "^2.14.6"
-      
-    }
+  "name": "discord-voice-joiner",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Automatically connect your Discord accounts to voice channels using user tokens",
+  "main": "./src/server.js",
+  "scripts": {
+    "start": "node .",
+    "dev": "node ."
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "author": "l1ve709",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/voice": "^0.19.2",
+    "debug": "^4.4.3",
+    "discord.js-selfbot-v13": "^3.7.1",
+    "dotenv": "^16.4.7"
   }
+}

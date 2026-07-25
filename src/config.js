@@ -1,55 +1,111 @@
-export default {
-    TOKENS: [
-           "YOUR_TOKEN", // token 1
-           "YOUR_TOKEN", // token 2
-           "YOUR_TOKEN", // token 3      // ! Yardıma ihtiyacın varsa bana Instagram veya Discord üzerinden ulaş cxnsole
-           "YOUR_TOKEN", // token 4      // ! If you need help? Contacnt me on Instagram or Discord cxnsole
-           "YOUR_TOKEN", // token 4
-           "YOUR_TOKEN", // token 5    
-           "YOUR_TOKEN", // token 6
-           "YOUR_TOKEN", // token 7
-           "YOUR_TOKEN", // token 8
-           "YOUR_TOKEN", // token 9
-           "YOUR_TOKEN", // token 10
-           "YOUR_TOKEN", // token 11
-           "YOUR_TOKEN", // token 12
-           "YOUR_TOKEN", // token 13
-           "YOUR_TOKEN"  // token 14
+import 'dotenv/config';
 
-           
-    ],
-    guildId: '794971762487853116',  // tokens will enter to this guild id --change this / tokenlerin gireceği sunucunun id si  
-    channelIds: [
-        '1261764628673990839',    //token 1 vc     // The sound channels here are selected in order of tokens, allowing you to insert the token you want into the sound you want. You can make all IDs the same
-        '1261764628673990839',   // token 2 vc         
-        '1261764628673990839',   // token 3 vc        Burdaki ses kanalları token sırasına göre seçilip istediğiniz tokeni
-        '1261764628673990839',   // token 4 vc        istediğiniz sese sokmanıza olanak tanır. Bütün ID leri aynı yapabilirsiniz
-        '1261764628673990839',   // token 5 vc
-        '1261764628673990839',   // token 6 vc
-        '1261764628673990839',   // token 7 vc
-        '1261764628673990839',   // token 8 vc
-        '1261764628673990839',  //  token 9 vc
-        '1261764628673990839',  //  token 10 vc
-        '1261764628673990839', //   token 11 vc
-        '1261764628673990839',  //  token 12 vc 
-        '1261764628673990839',   // token 13 vc  
-        '1261764628673990839'    // token 14 vc
-    ],
-    voiceSettings: [  // don't work / bu kısım çalışmıyor
-        { mute: false, deaf: false },
-        { mute: true, deaf: true },   
-        { mute: true, deaf: true }, 
-        { mute: false, deaf: false },
-        { mute: false, deaf: false }, 
-        { mute: false, deaf: false },  
-        { mute: false, deaf: false },
-        { mute: false, deaf: false }, 
-        { mute: true, deaf: true }, 
-        { mute: false, deaf: false }, 
-        { mute: false, deaf: false },   
-        { mute: false, deaf: false }, 
-        { mute: false, deaf: false },  
-        { mute: false, deaf: false }    
-    ]
+// ──────────────────────────────────────────────
+// Yardımcı: Ortam değişkenlerini oku
+// ──────────────────────────────────────────────
+function env(key, fallback = undefined) {
+    const value = process.env[key];
+    if (value === undefined || value === '') return fallback;
+    return value;
+}
+
+// ──────────────────────────────────────────────
+// Token'ları .env'den oku
+// ──────────────────────────────────────────────
+const rawTokens = env('TOKENS', '');
+const TOKENS = rawTokens
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => t.length > 0);
+
+// ──────────────────────────────────────────────
+// Varsayılan ayarlar
+// ──────────────────────────────────────────────
+const DEFAULT_GUILD_ID = env('DEFAULT_GUILD_ID', '');
+const DEFAULT_CHANNEL_ID = env('DEFAULT_CHANNEL_ID', '');
+
+// ──────────────────────────────────────────────
+// Per-token yapılandırma
+// Her token için ayrı guild, channel, presence ve
+// ses ayarları belirlenebilir.
+//
+// Eğer per-token ayar yoksa, varsayılan değerler kullanılır.
+// Bu diziyi istediğiniz kadar genişletebilirsiniz.
+// ──────────────────────────────────────────────
+const PER_TOKEN_CONFIG = [
+    // Örnek:
+    // {
+    //     guildId: '123456789',          // opsiyonel — boş bırakılırsa DEFAULT_GUILD_ID kullanılır
+    //     channelId: '987654321',        // opsiyonel — boş bırakılırsa DEFAULT_CHANNEL_ID kullanılır
+    //     mute: false,                   // opsiyonel — varsayılan false
+    //     deaf: false,                   // opsiyonel — varsayılan false
+    //     presence: {                    // opsiyonel — ayarlanmazsa presence değiştirilmez
+    //         status: 'dnd',             // 'online' | 'idle' | 'dnd' | 'invisible'
+    //         type: 'STREAMING',         // 'PLAYING' | 'STREAMING' | 'LISTENING' | 'WATCHING' | 'CUSTOM'
+    //         name: 'Yayın başlığı',
+    //         url: 'https://twitch.tv/kanal',   // sadece STREAMING için
+    //         state: ''                  // sadece CUSTOM için
+    //     }
+    // },
+];
+
+// ──────────────────────────────────────────────
+// Reconnect ayarları
+// ──────────────────────────────────────────────
+const RECONNECT = {
+    enabled: true,          // Otomatik yeniden bağlanma
+    maxRetries: 5,          // Maksimum deneme sayısı
+    delayMs: 5000,          // Denemeler arası bekleme (ms)
+    backoffMultiplier: 2,   // Her denemede bekleme çarpanı
 };
 
+// ──────────────────────────────────────────────
+// Durum raporu aralığı (ms) — 0 = devre dışı
+// ──────────────────────────────────────────────
+const STATUS_REPORT_INTERVAL_MS = 60_000; // her 60 saniyede bir
+
+// ──────────────────────────────────────────────
+// Config nesnesini derle ve doğrula
+// ──────────────────────────────────────────────
+function buildConfig() {
+    // Token kontrolü
+    if (TOKENS.length === 0) {
+        console.error('❌ Hata: .env dosyasında TOKENS bulunamadı.');
+        console.error('   .env.example dosyasını .env olarak kopyalayın ve tokenlerinizi girin.');
+        process.exit(1);
+    }
+
+    // Per-token config'leri varsayılanlarla birleştir
+    const tokens = TOKENS.map((token, index) => {
+        const perToken = PER_TOKEN_CONFIG[index] || {};
+        return {
+            token,
+            guildId: perToken.guildId || DEFAULT_GUILD_ID,
+            channelId: perToken.channelId || DEFAULT_CHANNEL_ID,
+            mute: perToken.mute ?? false,
+            deaf: perToken.deaf ?? false,
+            presence: perToken.presence || null,
+        };
+    });
+
+    // Doğrulama
+    for (let i = 0; i < tokens.length; i++) {
+        const t = tokens[i];
+        if (!t.guildId) {
+            console.error(`❌ Hata: Token #${i + 1} için guildId belirtilmemiş.`);
+            process.exit(1);
+        }
+        if (!t.channelId) {
+            console.error(`❌ Hata: Token #${i + 1} için channelId belirtilmemiş.`);
+            process.exit(1);
+        }
+    }
+
+    return {
+        tokens,
+        reconnect: RECONNECT,
+        statusReportIntervalMs: STATUS_REPORT_INTERVAL_MS,
+    };
+}
+
+export default buildConfig();
