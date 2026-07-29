@@ -2,9 +2,7 @@ import config from './config.js';
 import { Client } from 'discord.js-selfbot-v13';
 import { joinVoiceChannel, VoiceConnectionStatus, entersState } from '@discordjs/voice';
 
-// ──────────────────────────────────────────────
-// Loglama yardımcıları
-// ──────────────────────────────────────────────
+
 const Colors = {
     reset: '\x1b[0m',
     bright: '\x1b[1m',
@@ -30,14 +28,10 @@ function logWarn(tag, message) { log(tag, `⚠️  ${message}`, Colors.yellow); 
 function logError(tag, message) { log(tag, `❌ ${message}`, Colors.red); }
 function logInfo(tag, message) { log(tag, `ℹ️  ${message}`, Colors.blue); }
 
-// ──────────────────────────────────────────────
-// Bağlantı durumu takibi
-// ──────────────────────────────────────────────
+
 const connections = new Map(); // tag -> { status, voiceConnection, client, tokenConfig }
 
-// ──────────────────────────────────────────────
-// Voice bağlantısı kur (reconnect destekli)
-// ──────────────────────────────────────────────
+
 async function connectToVoice(client, tokenConfig, tag, retryCount = 0) {
     const guild = client.guilds.cache.get(tokenConfig.guildId);
     if (!guild) {
@@ -63,7 +57,6 @@ async function connectToVoice(client, tokenConfig, tag, retryCount = 0) {
             selfDeaf: tokenConfig.deaf,
         });
 
-        // Bağlantı durumu değişikliklerini dinle
         connection.on(VoiceConnectionStatus.Ready, () => {
             logSuccess(tag, `Ses kanalına bağlandı: ${voiceChannel.name}` +
                 (tokenConfig.mute ? ' [MUTE]' : '') +
@@ -76,14 +69,11 @@ async function connectToVoice(client, tokenConfig, tag, retryCount = 0) {
             connections.set(tag, { ...connections.get(tag), status: 'disconnected' });
 
             try {
-                // Discord.js'in kendi reconnect mekanizmasını bekle
                 await Promise.race([
                     entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
                     entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
                 ]);
-                // Yeniden bağlanıyor, bekle
             } catch {
-                // Bağlantı tamamen koptu, yeniden dene
                 connection.destroy();
                 if (config.reconnect.enabled) {
                     await retryConnection(client, tokenConfig, tag);
@@ -103,9 +93,7 @@ async function connectToVoice(client, tokenConfig, tag, retryCount = 0) {
     }
 }
 
-// ──────────────────────────────────────────────
-// Yeniden bağlanma mekanizması (exponential backoff)
-// ──────────────────────────────────────────────
+
 async function retryConnection(client, tokenConfig, tag, attempt = 0) {
     const { maxRetries, delayMs, backoffMultiplier } = config.reconnect;
 
@@ -130,9 +118,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ──────────────────────────────────────────────
-// Presence (durum) ayarla
-// ──────────────────────────────────────────────
+
 function setPresence(client, presenceConfig, tag) {
     if (!presenceConfig) return;
 
@@ -154,9 +140,7 @@ function setPresence(client, presenceConfig, tag) {
     }
 }
 
-// ──────────────────────────────────────────────
-// Ana başlatma fonksiyonu
-// ──────────────────────────────────────────────
+
 async function start() {
     console.log('');
     console.log(`${Colors.bright}${Colors.magenta}╔══════════════════════════════════════════╗${Colors.reset}`);
@@ -182,13 +166,10 @@ async function start() {
             const tag = client.user.tag;
             logSuccess(tag, 'Giriş başarılı');
 
-            // Bağlantı durumunu kaydet
             connections.set(tag, { status: 'connecting', client, tokenConfig });
 
-            // Ses kanalına bağlan
             await connectToVoice(client, tokenConfig, tag);
 
-            // Presence ayarla
             setPresence(client, tokenConfig.presence, tag);
         });
 
@@ -207,9 +188,7 @@ async function start() {
         }
     }
 
-    // ──────────────────────────────────────────
-    // Periyodik durum raporu
-    // ──────────────────────────────────────────
+
     if (config.statusReportIntervalMs > 0) {
         setInterval(() => {
             console.log('');
@@ -224,9 +203,7 @@ async function start() {
         }, config.statusReportIntervalMs);
     }
 
-    // ──────────────────────────────────────────
-    // Graceful shutdown
-    // ──────────────────────────────────────────
+
     async function shutdown(signal) {
         console.log('');
         logWarn('Sistem', `${signal} alındı — kapatılıyor...`);
@@ -241,16 +218,13 @@ async function start() {
                     info.client.destroy();
                 }
             } catch {
-                // Sessizce devam et
             }
         }
 
-        // Login olmuş ama connections map'ine eklenmemiş client'ları da kapat
         for (const { client } of clients) {
             try {
                 client.destroy();
             } catch {
-                // Sessizce devam et
             }
         }
 
@@ -262,9 +236,7 @@ async function start() {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
-// ──────────────────────────────────────────────
-// Beklenmeyen hatalar
-// ──────────────────────────────────────────────
+
 process.on('unhandledRejection', (reason) => {
     logError('Sistem', `Beklenmeyen hata (unhandledRejection): ${reason}`);
 });
@@ -273,5 +245,4 @@ process.on('uncaughtException', (error) => {
     logError('Sistem', `Beklenmeyen hata (uncaughtException): ${error.message}`);
 });
 
-// Başlat
 start();
